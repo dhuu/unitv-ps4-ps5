@@ -1,0 +1,66 @@
+name: Build PS5 ELF
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      # ps5-payload-sdk + bibliotecas (SDL2, FFmpeg, FreeType, curl) do PacBrew
+      PACBREW_VERSION: v0.41.1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar clang/lld 18 e ferramentas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18 cmake make pkg-config python3
+
+      - name: Cache do SDK do PS5
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ps5-payload-dev.tar.gz
+          key: ps5-payload-dev-${{ env.PACBREW_VERSION }}
+
+      - name: Baixar SDK do PS5
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: curl -sL -o ps5-payload-dev.tar.gz "https://github.com/ps5-payload-dev/pacbrew-repo/releases/download/${PACBREW_VERSION}/ps5-payload-dev.tar.gz"
+
+      - name: Instalar SDK do PS5 em /opt/ps5-payload-sdk
+        run: |
+          sudo tar xf ps5-payload-dev.tar.gz -C /
+          ls /opt/ps5-payload-sdk/bin
+
+      - name: Compilar
+        run: |
+          /opt/ps5-payload-sdk/bin/prospero-cmake -S . -B build-ps5
+          cmake --build build-ps5 -j"$(nproc)"
+
+      - name: Mapa de símbolos (para traduzir endereços de crash do log)
+        run: llvm-nm-18 -n -C build-ps5/UnitVPro-PS5.elf > build-ps5/UnitVPro-PS5.map
+
+      - name: Enviar ELF (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitVPro-PS5-elf
+          path: |
+            build-ps5/UnitVPro-PS5.elf
+            build-ps5/UnitVPro-PS5.map
+          if-no-files-found: error
+
+      - name: Publicar release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-ps5/UnitVPro-PS5.elf
