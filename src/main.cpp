@@ -26,7 +26,11 @@ static void appMain()
 
     if (!gfx::init()) {
         platform::log("Falha ao iniciar gráficos");
+#ifdef UNITV_PS5
+        // encerra para não segurar memória: um novo envio do payload começa do zero
         platform::notify("UnitV Pro: falha ao iniciar a tela (veja /data/UnitVPro/log.txt)");
+        _Exit(1);
+#endif
         for (;;) platform::sleepMs(1000);
     }
     if (!http::init()) platform::log("Falha ao iniciar rede");

@@ -60,10 +60,31 @@ SDL_Surface* screen() { return g_screen; }
 
 bool init()
 {
+#ifdef UNITV_PS5
+    // A memória de vídeo (64 MB) pode demorar a ser liberada por uma execução anterior: tenta algumas vezes
+    bool ok = false;
+    for (int attempt = 1; attempt <= 5 && !ok; attempt++) {
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0) {
+            platform::log("SDL_Init (tentativa %d): %s", attempt, SDL_GetError());
+        } else if (!SDL_GetCurrentVideoDriver() || strcmp(SDL_GetCurrentVideoDriver(), "ps5") != 0) {
+            // o driver ps5 falhou e o SDL caiu num driver sem tela (offscreen/dummy)
+            platform::log("driver de vídeo '%s' (tentativa %d): %s",
+                          SDL_GetCurrentVideoDriver() ? SDL_GetCurrentVideoDriver() : "nenhum", attempt, SDL_GetError());
+            SDL_Quit();
+        } else {
+            ok = true;
+            break;
+        }
+        platform::sleepMs(1000);
+    }
+    if (!ok) return false;
+    platform::log("driver de vídeo: %s", SDL_GetCurrentVideoDriver());
+#else
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0) {
         platform::log("SDL_Init: %s", SDL_GetError());
         return false;
     }
+#endif
     g_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, 0);
     if (!g_window) { platform::log("SDL_CreateWindow: %s", SDL_GetError()); return false; }
 #ifdef UNITV_PS5

@@ -3,12 +3,17 @@
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
+#include <cstdlib>
 #include <ctime>
 #include <sys/stat.h>
 #include <pthread.h>
 
 #ifdef UNITV_PS5
 #include <unistd.h>
+#include <csignal>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
 // Bibliotecas do sistema do PS5 (stubs do ps5-payload-sdk); assinaturas iguais às do PS4
 extern "C" {
 int sceUserServiceInitialize(void*);
@@ -60,9 +65,42 @@ static void extractAssets()
     log("assets: %u embutidos, %d gravados em %s", g_embeddedAssetCount, written, APP_ASSETS);
 }
 
+// Nome do processo (o loader dá o mesmo nome a cada envio do payload)
+static std::string processName(pid_t pid)
+{
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, (int)pid};
+    struct kinfo_proc kp;
+    size_t len = sizeof(kp);
+    memset(&kp, 0, sizeof(kp));
+    if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0 || len == 0) return "";
+    return kp.ki_comm;
+}
+
+// Um envio anterior do payload que continua aberto segura a memória de vídeo
+// (sceKernelAllocateMainDirectMemory falha com EAGAIN): encerra-o antes de abrir a tela.
+static void closePreviousInstance()
+{
+    const std::string pidFile = std::string(APP_DATA_DIR) + "/pid.txt";
+    pid_t self = getpid();
+    std::string old;
+    if (readFile(pidFile, old)) {
+        pid_t pid = (pid_t)atoi(old.c_str());
+        std::string name = pid > 0 && pid != self ? processName(pid) : "";
+        if (!name.empty() && name == processName(self)) {
+            log("encerrando execução anterior (pid %d, %s)", (int)pid, name.c_str());
+            kill(pid, SIGKILL);
+            for (int i = 0; i < 30 && !processName(pid).empty(); i++) usleep(100 * 1000);
+            usleep(500 * 1000); // tempo para o sistema liberar a memória de vídeo
+        }
+    }
+    writeFile(pidFile, std::to_string((int)self));
+}
+
 bool init()
 {
     setvbuf(stdout, NULL, _IONBF, 0);
+    ensureDir(APP_DATA_DIR);
+    closePreviousInstance();
     int r = sceUserServiceInitialize(NULL);
     if (r != 0 && r != (int)0x80960003) log("sceUserServiceInitialize 0x%08X", r);
     if (sceUserServiceGetForegroundUser(&g_userId) != 0) g_userId = -1;
