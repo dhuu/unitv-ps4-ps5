@@ -9,7 +9,6 @@
 #include "screens.h"
 #include "player.h"
 #include "crash.h"
-#include "platform.h"
 
 #include <cstdlib>
 #ifndef UNITV_PS5
@@ -20,10 +19,14 @@ static void appMain()
 {
     platform::init();
     platform::log("Iniciando UnitV Pro");
+#ifdef UNITV_PS5
+    platform::notify("UnitV Pro: iniciando...");
+#endif
     crash::install();
 
     if (!gfx::init()) {
         platform::log("Falha ao iniciar gráficos");
+        platform::notify("UnitV Pro: falha ao iniciar a tela (veja /data/UnitVPro/log.txt)");
         for (;;) platform::sleepMs(1000);
     }
     if (!http::init()) platform::log("Falha ao iniciar rede");

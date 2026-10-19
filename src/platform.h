@@ -22,6 +22,8 @@ int64_t unixTime();             // segundos desde epoch (UTC)
 void sleepMs(uint32_t ms);
 int freeMemoryMB();             // memória flexível livre (MB), -1 se indisponível
 void log(const char* fmt, ...);
+// Aviso na tela do sistema (PS5: notificação do console; PS4: só grava no log)
+void notify(const char* fmt, ...);
 bool readFile(const std::string& path, std::string& out);
 bool writeFile(const std::string& path, const std::string& data);
 void ensureDir(const std::string& path);

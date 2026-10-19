@@ -17,6 +17,7 @@ int sceNetInit(void);
 int sceNetGetMacAddress(uint8_t* addr, int flags);
 int sceAudioOutInit(void);
 int sceKernelAvailableFlexibleMemorySize(size_t*);
+int sceKernelSendNotificationRequest(int, void*, size_t, int);
 }
 // Imagens e fontes embutidas no .elf (gerado por scripts/embed_assets.py)
 struct EmbeddedAsset {
@@ -167,6 +168,26 @@ void log(const char* fmt, ...)
         fprintf(lf, "[%llu] %s\n", (unsigned long long)ticksMs(), buf);
         fflush(lf);
     }
+}
+
+void notify(const char* fmt, ...)
+{
+    char buf[512];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    log("aviso: %s", buf);
+#ifdef UNITV_PS5
+    // mesmo formato usado pelo elfldr/ftpsrv do ps5-payload-dev
+    struct NotifyRequest {
+        char unused[45];
+        char message[3075];
+    } req;
+    memset(&req, 0, sizeof(req));
+    strncpy(req.message, buf, sizeof(req.message) - 1);
+    sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+#endif
 }
 
 bool readFile(const std::string& path, std::string& out)
