@@ -107,7 +107,8 @@ bool init()
             SDL_ClearError();
             g_screen = SDL_GetWindowSurface(g_window);
             if (g_screen) break;
-            platform::log("SDL_GetWindowSurface (tentativa %d): %s", attempt, SDL_GetError());
+            platform::log("SDL_GetWindowSurface (tentativa %d): %s (mem flexível livre %d MB)", attempt, SDL_GetError(),
+                          platform::freeMemoryMB());
             SDL_DestroyWindow(g_window);
             g_window = nullptr;
         }
