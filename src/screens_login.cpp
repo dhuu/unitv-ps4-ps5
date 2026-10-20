@@ -183,6 +183,8 @@ class LoginScreen : public Screen {
     std::string mac_;
     uint64_t nextAutoCheck_ = 0;
     bool checking_ = false;
+    bool dnsOpen_ = false;   // lista de DNS aberta
+    int dnsSel_ = 0;
 
     // itens focáveis
     enum Item { ItUser, ItPass, ItDns, ItLogin, ItSwitch, ItCount };
@@ -218,18 +220,14 @@ class LoginScreen : public Screen {
         return scheme + host.substr(0, 5);
     }
 
-    void cycleDns(int dir)
+    void openDnsList()
     {
         std::vector<std::string> v = availableDns();
         if (v.empty()) { status_ = "Nenhum servidor disponível."; return; }
-        Settings& s = storage::settings();
-        std::string cur = api::normalizeDns(s.dns);
-        int idx = -1;
-        for (size_t k = 0; k < v.size(); k++) if (v[k] == cur) idx = (int)k;
-        int n = (int)v.size();
-        idx = idx < 0 ? 0 : ((idx + dir) % n + n) % n;
-        s.dns = v[(size_t)idx];
-        storage::save();
+        std::string cur = api::normalizeDns(storage::settings().dns);
+        dnsSel_ = 0;
+        for (size_t k = 0; k < v.size(); k++) if (v[k] == cur) dnsSel_ = (int)k;
+        dnsOpen_ = true;
     }
 
 public:
@@ -305,7 +303,7 @@ public:
             });
             break;
         case ItDns:
-            cycleDns(1);
+            openDnsList();
             break;
         case ItLogin:
             if (macMode_) checkMac(false);
@@ -325,10 +323,21 @@ public:
     void input(Btn b) override
     {
         if (busy_) return;
+        if (dnsOpen_) {
+            std::vector<std::string> v = availableDns();
+            int cnt = (int)v.size();
+            if (b == Btn::Up && dnsSel_ > 0) dnsSel_--;
+            else if (b == Btn::Down && dnsSel_ < cnt - 1) dnsSel_++;
+            else if (b == Btn::Cross && cnt > 0) {
+                storage::settings().dns = v[(size_t)dnsSel_];
+                storage::save();
+                dnsOpen_ = false;
+            } else if (b == Btn::Circle) dnsOpen_ = false;
+            return;
+        }
         std::vector<int> its = items();
         int n = (int)its.size();
-        if (!macMode_ && its[(size_t)focus_] == ItDns && (b == Btn::Left || b == Btn::Right)) cycleDns(b == Btn::Right ? 1 : -1);
-        else if (b == Btn::Up && focus_ > 0) focus_--;
+        if (b == Btn::Up && focus_ > 0) focus_--;
         else if (b == Btn::Down && focus_ < n - 1) focus_++;
         else if (b == Btn::Cross) activate(its[(size_t)focus_]);
         else if (b == Btn::Circle) app::dialog("Sair", "Deseja fechar o " APP_NAME "?", {"Sim", "Não"}, [](int r) {
@@ -382,7 +391,7 @@ public:
             field(px + 70, y + 120, pw - 140, "Senha", s.pass, focused(ItPass), true);
             std::string dnsLabel = shortDns(s.dns);
             size_t dn = availableDns().size();
-            std::string dnsTitle = dn > 1 ? "Servidor (DNS) — X ou Esq/Dir para trocar (" + std::to_string(dn) + " disponíveis)" : "Servidor (DNS)";
+            std::string dnsTitle = dn > 1 ? "Servidor (DNS) — X para escolher (" + std::to_string(dn) + " disponíveis)" : "Servidor (DNS)";
             field(px + 70, y + 240, pw - 140, dnsTitle, dnsLabel, focused(ItDns), false);
             y += 370;
         }
@@ -394,7 +403,30 @@ public:
         if (!status_.empty())
             gfx::text(status_, px + pw / 2, py + ph + 24, 26, busy_ ? col::text : col::accent2, false, 1500, Align::Center);
         gfx::text("v" APP_VERSION, SCREEN_W - 40, SCREEN_H - 50, 22, col::dim, false, 0, Align::Right);
-        ui::footer({{"X", "Selecionar"}, {"O", "Sair"}});
+        ui::footer({{"X", "Selecionar"}, {"O", dnsOpen_ ? "Fechar lista" : "Sair"}});
+
+        if (dnsOpen_) {
+            std::vector<std::string> v = availableDns();
+            int cnt = (int)v.size();
+            const int rowH = 70, maxRows = 7;
+            int rows = cnt < maxRows ? cnt : maxRows;
+            int first = dnsSel_ - rows + 1;
+            if (first < 0) first = 0;
+            int lw = 600, lh = rows * rowH + 90;
+            int lx = SCREEN_W / 2 - lw / 2, ly = SCREEN_H / 2 - lh / 2;
+            gfx::fillRect(0, 0, SCREEN_W, SCREEN_H, {0, 0, 0, 170});
+            gfx::fillRect(lx, ly, lw, lh, {14, 18, 34, 255});
+            gfx::fillRect(lx, ly, lw, 6, col::accent);
+            gfx::text("Selecione o servidor (DNS)", lx + lw / 2, ly + 20, 28, col::text, true, 0, Align::Center);
+            for (int r = 0; r < rows; r++) {
+                int k = first + r;
+                bool sel = k == dnsSel_;
+                int ry = ly + 75 + r * rowH;
+                gfx::fillRect(lx + 20, ry, lw - 40, rowH - 8, sel ? Color{40, 56, 100, 255} : Color{26, 30, 54, 255});
+                if (sel) gfx::drawRect(lx + 17, ry - 3, lw - 34, rowH - 2, 3, col::accent);
+                gfx::text(shortDns(v[(size_t)k]), lx + 44, ry + 14, 28, col::text);
+            }
+        }
     }
 };
 
