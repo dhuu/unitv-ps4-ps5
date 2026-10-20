@@ -192,11 +192,55 @@ class LoginScreen : public Screen {
         return {ItUser, ItPass, ItDns, ItLogin, ItSwitch};
     }
 
+    // DNSs disponíveis (obtidos do servidor/painel)
+    static std::vector<std::string> availableDns()
+    {
+        std::vector<std::string> v;
+        Settings& s = storage::settings();
+        for (auto& d : s.dnsList) {
+            std::string n = api::normalizeDns(d);
+            if (n.empty()) continue;
+            bool dup = false;
+            for (auto& x : v) if (x == n) dup = true;
+            if (!dup) v.push_back(n);
+        }
+        if (v.empty() && !s.dns.empty()) v.push_back(api::normalizeDns(s.dns));
+        return v;
+    }
+
+    // Exibe apenas 5 caracteres após o http://
+    static std::string shortDns(const std::string& d)
+    {
+        if (d.empty()) return "";
+        size_t p = d.find("://");
+        std::string scheme = p == std::string::npos ? "http://" : d.substr(0, p + 3);
+        std::string host = p == std::string::npos ? d : d.substr(p + 3);
+        return scheme + host.substr(0, 5);
+    }
+
+    void cycleDns(int dir)
+    {
+        std::vector<std::string> v = availableDns();
+        if (v.empty()) { status_ = "Nenhum servidor disponível."; return; }
+        Settings& s = storage::settings();
+        std::string cur = api::normalizeDns(s.dns);
+        int idx = -1;
+        for (size_t k = 0; k < v.size(); k++) if (v[k] == cur) idx = (int)k;
+        int n = (int)v.size();
+        idx = idx < 0 ? 0 : ((idx + dir) % n + n) % n;
+        s.dns = v[(size_t)idx];
+        storage::save();
+    }
+
 public:
     explicit LoginScreen(const std::string& notice) : status_(notice)
     {
         macMode_ = storage::settings().loginMode != "USER";
         mac_ = platform::macAddress();
+        if (storage::settings().dns.empty()) {
+            std::vector<std::string> v = availableDns();
+            if (!v.empty()) storage::settings().dns = v[0];
+        }
     }
 
     void enter() override { nextAutoCheck_ = platform::ticksMs() + 5000; }
@@ -261,9 +305,7 @@ public:
             });
             break;
         case ItDns:
-            ime::open("Servidor (DNS) — ex.: http://servidor.com:80", s.dns, ime::Type::Url, [](bool ok, const std::string& t) {
-                if (ok) { storage::settings().dns = t; storage::save(); }
-            });
+            cycleDns(1);
             break;
         case ItLogin:
             if (macMode_) checkMac(false);
@@ -285,7 +327,8 @@ public:
         if (busy_) return;
         std::vector<int> its = items();
         int n = (int)its.size();
-        if (b == Btn::Up && focus_ > 0) focus_--;
+        if (!macMode_ && its[(size_t)focus_] == ItDns && (b == Btn::Left || b == Btn::Right)) cycleDns(b == Btn::Right ? 1 : -1);
+        else if (b == Btn::Up && focus_ > 0) focus_--;
         else if (b == Btn::Down && focus_ < n - 1) focus_++;
         else if (b == Btn::Cross) activate(its[(size_t)focus_]);
         else if (b == Btn::Circle) app::dialog("Sair", "Deseja fechar o " APP_NAME "?", {"Sim", "Não"}, [](int r) {
@@ -337,8 +380,10 @@ public:
         } else {
             field(px + 70, y, pw - 140, "Usuário", s.user, focused(ItUser), false);
             field(px + 70, y + 120, pw - 140, "Senha", s.pass, focused(ItPass), true);
-            std::string dnsLabel = s.dns.empty() ? (s.dnsList.empty() ? "" : s.dnsList[0] + " (painel)") : s.dns;
-            field(px + 70, y + 240, pw - 140, "Servidor (DNS)", dnsLabel, focused(ItDns), false);
+            std::string dnsLabel = shortDns(s.dns);
+            size_t dn = availableDns().size();
+            std::string dnsTitle = dn > 1 ? "Servidor (DNS) — X ou Esq/Dir para trocar (" + std::to_string(dn) + " disponíveis)" : "Servidor (DNS)";
+            field(px + 70, y + 240, pw - 140, dnsTitle, dnsLabel, focused(ItDns), false);
             y += 370;
         }
         ui::button(px + 70, y, pw - 140, 72, macMode_ ? "Entrar / Verificar MAC" : "Entrar", focused(ItLogin), true);
