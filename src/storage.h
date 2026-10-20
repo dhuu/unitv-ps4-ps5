@@ -1,5 +1,5 @@
 #pragma once
-// Persistência local (substitui SharedPreferences do Android): /data/UnitVPro/settings.json
+// Persistência local (substitui SharedPreferences do Android): /data/WillProTV/settings.json
 #include <string>
 #include <vector>
 #include <cstdint>

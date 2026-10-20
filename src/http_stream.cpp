@@ -1,5 +1,5 @@
 // Download por faixas (HTTP Range) usado pelo player (FFmpeg) para ler vídeos remotos
-#ifndef UNITV_PS5 // PS4: sceHttp (a versão do PS5 está em http_curl.cpp)
+#ifndef WILLPRO_PS5 // PS4: sceHttp (a versão do PS5 está em http_curl.cpp)
 #include "http.h"
 #include "platform.h"
 
@@ -209,4 +209,4 @@ std::string resolveRedirects(const std::string& urlIn)
 
 } // namespace http
 
-#endif // UNITV_PS5
+#endif // WILLPRO_PS5

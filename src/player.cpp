@@ -30,7 +30,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 // O PS5 tem a mesma saída de áudio do PS4 (libSceAudioOut); valores do OpenOrbis
 extern "C" {
 int32_t sceAudioOutOpen(int32_t userId, int32_t type, int32_t index, uint32_t len, uint32_t freq, uint32_t param);
@@ -45,7 +45,7 @@ int32_t sceAudioOutClose(int32_t port);
 #include <orbis/UserService.h>
 #endif
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 // PS5: o FFmpeg vem pronto do PacBrew; o CMakeLists.txt liga com --wrap=pthread_create e todas
 // as threads criadas sem atributos (FFmpeg, std::thread) passam por aqui e ganham pilha de 1 MB.
 extern "C" int __real_pthread_create(pthread_t* t, const pthread_attr_t* a, void* (*fn)(void*), void* arg);
@@ -62,9 +62,9 @@ extern "C" int __wrap_pthread_create(pthread_t* t, const pthread_attr_t* a, void
     return r;
 }
 #else
-// O FFmpeg é compilado com -Dpthread_create=unitv_pthread_create (scripts/build-ffmpeg.sh):
+// O FFmpeg é compilado com -Dpthread_create=willpro_pthread_create (scripts/build-ffmpeg.sh):
 // as threads dele passam por aqui e ganham pilha de 1 MB (a padrão do musl é pequena).
-extern "C" int unitv_pthread_create(pthread_t* t, const pthread_attr_t* a, void* (*fn)(void*), void* arg)
+extern "C" int willpro_pthread_create(pthread_t* t, const pthread_attr_t* a, void* (*fn)(void*), void* arg)
 {
     static std::atomic<int> count{0};
     if (count++ == 0) platform::log("threads do FFmpeg usando pilha de 1 MB");

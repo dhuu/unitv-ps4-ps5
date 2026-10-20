@@ -1,5 +1,5 @@
 // HTTP do PS5 via libcurl (ps5-payload-sdk). Mesma interface de http.cpp + http_stream.cpp do PS4.
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 #include "http.h"
 #include "platform.h"
 
@@ -358,4 +358,4 @@ void streamClose(Stream& st)
 
 } // namespace http
 
-#endif // UNITV_PS5
+#endif // WILLPRO_PS5

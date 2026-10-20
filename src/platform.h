@@ -4,10 +4,10 @@
 #include <functional>
 
 // Caminhos dos arquivos do app e de dados graváveis
-#define APP_DATA_DIR "/data/UnitVPro"
-#ifdef UNITV_PS5
+#define APP_DATA_DIR "/data/WillProTV"
+#ifdef WILLPRO_PS5
 // O payload do PS5 é um .elf só: as imagens e fontes vão embutidas e são extraídas aqui no início
-#define APP_ASSETS "/data/UnitVPro/assets"
+#define APP_ASSETS "/data/WillProTV/assets"
 #else
 #define APP_ASSETS "/app0/assets"
 #endif

@@ -1,5 +1,5 @@
 // Captura de crash: grava no log o sinal, a instrução que falhou e endereços da pilha.
-// Os endereços podem ser traduzidos com o mapa de símbolos gerado no CI (UnitVPro.map).
+// Os endereços podem ser traduzidos com o mapa de símbolos gerado no CI (WillProTV.map).
 #include "crash.h"
 #include "platform.h"
 
@@ -9,7 +9,7 @@
 #include <exception>
 #include <pthread.h>
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 #include <csignal>
 #include <ucontext.h>
 #else
@@ -47,7 +47,7 @@ static void report(int sig, uint64_t rip, uint64_t addr, uint64_t rsp, uint64_t 
     platform::log("==== fim do relatorio ====");
 }
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 static void handler(int sig, siginfo_t* info, void* ctx)
 {
     const mcontext_t& m = ((ucontext_t*)ctx)->uc_mcontext;
@@ -108,7 +108,7 @@ void install()
     std::set_terminate(onTerminate);
     const int sigs[] = {4 /*SIGILL*/, 6 /*SIGABRT*/, 8 /*SIGFPE*/, 10 /*SIGBUS*/, 11 /*SIGSEGV*/};
     for (int s : sigs) {
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
         sa.sa_sigaction = handler;

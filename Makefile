@@ -1,11 +1,11 @@
-# UnitV Pro - PS4 (OpenOrbis Toolchain)
+# WillPro-TV - PS4 (OpenOrbis Toolchain)
 # Build: export OO_PS4_TOOLCHAIN=/caminho/OpenOrbis/PS4Toolchain && make
 
 # Package metadata.
-TITLE       := UnitV Pro
+TITLE       := WillPro-TV
 VERSION     := 22.00
-TITLE_ID    := UNTV00001
-CONTENT_ID  := IV0000-UNTV00001_00-UNITVPROPS400000
+TITLE_ID    := WLTV00001
+CONTENT_ID  := IV0000-WLTV00001_00-WILLPROTV0000000
 
 # Libraries linked into the ELF.
 # FFmpeg compilado por scripts/build-ffmpeg.sh
@@ -73,8 +73,8 @@ sce_sys/param.sfo: Makefile
 	$(PKGTOOL) sfo_setentry $@ VERSION --type Utf8 --maxsize 8 --value '$(VERSION)'
 
 eboot.bin: $(OBJS)
-	$(LD) $(OBJS) -o build/UnitVPro.elf $(LDFLAGS)
-	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=build/UnitVPro.elf -out=build/UnitVPro.oelf --eboot "eboot.bin" --paid 0x3800000000000011
+	$(LD) $(OBJS) -o build/WillProTV.elf $(LDFLAGS)
+	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=build/WillProTV.elf -out=build/WillProTV.oelf --eboot "eboot.bin" --paid 0x3800000000000011
 
 $(INTDIR)/%.o: $(SRCDIR)/%.cpp $(wildcard $(SRCDIR)/*.h)
 	$(CCX) $(CXXFLAGS) -o $@ $<

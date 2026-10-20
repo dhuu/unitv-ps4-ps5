@@ -47,10 +47,10 @@ if [ -n "${CONFIGURE_ONLY:-}" ]; then echo "configure OK"; grep -E "HAVE_PTHREAD
 # sysctl não existe no PS4 (mesmo ajuste do PacBrew)
 sed -i 's|#define HAVE_SYSCTL 1|#define HAVE_SYSCTL 0|' config.h
 
-# As threads do FFmpeg passam pelo unitv_pthread_create do app (src/player.cpp), que usa pilha de 1 MB.
+# As threads do FFmpeg passam pelo willpro_pthread_create do app (src/player.cpp), que usa pilha de 1 MB.
 # Aplicado só na compilação (depois do configure, para os testes acharem o pthread_create real).
-sed -i 's|^CFLAGS=|CFLAGS=-Dpthread_create=unitv_pthread_create |' ffbuild/config.mak
-grep -q "unitv_pthread_create" ffbuild/config.mak || { echo "falha ao ajustar CFLAGS"; exit 1; }
+sed -i 's|^CFLAGS=|CFLAGS=-Dpthread_create=willpro_pthread_create |' ffbuild/config.mak
+grep -q "willpro_pthread_create" ffbuild/config.mak || { echo "falha ao ajustar CFLAGS"; exit 1; }
 
 make -j"$(nproc)"
 make install

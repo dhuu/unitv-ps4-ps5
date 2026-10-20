@@ -6,7 +6,7 @@
 
 namespace input {
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 // Índices de botão do port SDL2 do PS5 (ps5-payload-dev/SDL, src/joystick/ps5/SDL_ps5joystick.c)
 enum {
     PAD_CROSS = 0, PAD_CIRCLE = 1, PAD_SQUARE = 2, PAD_TRIANGLE = 3,

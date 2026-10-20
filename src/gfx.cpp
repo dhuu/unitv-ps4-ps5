@@ -4,7 +4,7 @@
 #include "http.h"
 #include "util.h"
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #else
@@ -60,7 +60,7 @@ SDL_Surface* screen() { return g_screen; }
 
 bool init()
 {
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
     // Sem isto o SDL_GetWindowSurface tenta antes um framebuffer por textura (OpenGL/Mesa), que pede
     // mais memória direta e falha com EAGAIN no payload. A interface já é desenhada por software.
     SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
@@ -89,7 +89,7 @@ bool init()
         return false;
     }
 #endif
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
     // a memória direta pode estar ocupada por uma execução anterior: recria a janela e tenta de novo
     const int maxTries = 10;
 #else
@@ -100,7 +100,7 @@ bool init()
         if (!g_window) {
             platform::log("SDL_CreateWindow (tentativa %d): %s", attempt, SDL_GetError());
         } else {
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
             // o SDL do PS5 abriria o teclado do sistema sozinho; o app abre quando precisa (ime.cpp)
             SDL_StopTextInput();
 #endif

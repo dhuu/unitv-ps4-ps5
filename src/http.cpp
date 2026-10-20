@@ -1,4 +1,4 @@
-#ifndef UNITV_PS5 // PS4: sceHttp (a versão do PS5 está em http_curl.cpp)
+#ifndef WILLPRO_PS5 // PS4: sceHttp (a versão do PS5 está em http_curl.cpp)
 #include "http.h"
 #include "platform.h"
 
@@ -30,7 +30,7 @@ static int skipSslCallback(int libsslId, unsigned int verifyErr, void* const ssl
 bool init()
 {
     sceNetInit();
-    g_netPool = sceNetPoolCreate("unitv_net", 64 * 1024, 0);
+    g_netPool = sceNetPoolCreate("willpro_net", 64 * 1024, 0);
     if (g_netPool < 0) { platform::log("sceNetPoolCreate 0x%08X", g_netPool); return false; }
     g_ssl = sceSslInit(1024 * 1024);
     if (g_ssl < 0) { platform::log("sceSslInit 0x%08X", g_ssl); return false; }
@@ -111,4 +111,4 @@ done:
 
 } // namespace http
 
-#endif // UNITV_PS5
+#endif // WILLPRO_PS5

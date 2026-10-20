@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-#ifndef UNITV_PS5
+#ifndef WILLPRO_PS5
 #include <orbis/SystemService.h>
 #endif
 
@@ -205,7 +205,7 @@ void run()
         gfx::endFrame();
         g_graveyard.clear();
 
-#ifndef UNITV_PS5
+#ifndef WILLPRO_PS5
         // O PS4 mantém a splash do sistema (pic1.png) por cima do app até ela ser escondida
         static bool splashHidden = false;
         if (!splashHidden) {

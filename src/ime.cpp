@@ -4,7 +4,7 @@
 
 #include <cstring>
 #include <vector>
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 // API do teclado do sistema no PS5 (mesma estrutura usada pelo SDL do PS5: SDL_ps5keyboard.c)
 extern "C" {
 struct Ps5ImeDialogParam {
@@ -86,7 +86,7 @@ static std::string fromUtf16(const uint16_t* w)
 }
 static std::function<void(bool, const std::string&)> g_cb;
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 static bool g_confirmed = false;   // PS5: Enter enviado pelo SDL ao confirmar
 static bool g_seenRunning = false;
 static uint64_t g_openedAt = 0;

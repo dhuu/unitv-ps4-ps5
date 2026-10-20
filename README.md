@@ -1,6 +1,6 @@
-# UnitV Pro — PS4 e PS5
+# WillPro-TV — PS4 e PS5
 
-Versão para PlayStation 4 (homebrew) do app Android **UnitV Pro** (`com.willdev.unitvpro`).
+Versão para PlayStation 4 (homebrew) do app Android **WillPro-TV** (`com.willdev.unitvpro`).
 É um port em C++ que usa o [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain),
 o SDL2 para desenhar a interface e um **player interno baseado no FFmpeg** (compilado no próprio CI por `scripts/build-ffmpeg.sh`).
 
@@ -37,10 +37,10 @@ A URL do painel fica em [`src/config.h`](src/config.h) (`PANEL_URL`), igual ao `
 
 ## Compilar no GitHub (recomendado)
 
-1. Crie um repositório no GitHub e envie **o conteúdo desta pasta** (`UnitVPro-PS4`) para a raiz dele.
+1. Crie um repositório no GitHub e envie **o conteúdo desta pasta** (`WillProTV-PS4`) para a raiz dele.
 2. O workflow [`.github/workflows/build-ps4.yml`](.github/workflows/build-ps4.yml) roda sozinho a cada push:
    baixa o OpenOrbis Toolchain, compila e gera o `.pkg`.
-3. Baixe o pacote em **Actions → (execução) → Artifacts → `UnitVPro-PS4-pkg`**.
+3. Baixe o pacote em **Actions → (execução) → Artifacts → `WillProTV-PS4-pkg`**.
 4. Para gerar uma *Release* com o `.pkg` anexado, crie uma tag: `git tag v1.0 && git push --tags`.
 
 ## Compilar localmente (Linux/WSL)
@@ -56,7 +56,7 @@ mkdir -p sce_module sce_sys/about
 cp $OO_PS4_TOOLCHAIN/samples/hello_world/sce_module/*.prx sce_module/
 cp $OO_PS4_TOOLCHAIN/samples/hello_world/sce_sys/about/right.sprx sce_sys/about/
 
-# 3) Build (gera IV0000-UNTV00001_00-UNITVPROPS400000.pkg)
+# 3) Build (gera IV0000-WLTV00001_00-WILLPROTV0000000.pkg)
 make CCX=clang++-18 LD=ld.lld-18
 ```
 
@@ -64,28 +64,28 @@ make CCX=clang++-18 LD=ld.lld-18
 
 1. Copie o `.pkg` para um pendrive (FAT32/exFAT) ou use o *Remote Package Installer* / FTP do GoldHEN.
 2. No PS4: **Debug Settings → Game → Package Installer** (ou o instalador do GoldHEN).
-3. O app aparece na tela inicial como **UnitV Pro** (`UNTV00001`).
+3. O app aparece na tela inicial como **WillPro-TV** (`WLTV00001`).
 
-Os dados (login, favoritos, histórico, progresso) ficam em `/data/UnitVPro/settings.json`.
+Os dados (login, favoritos, histórico, progresso) ficam em `/data/WillProTV/settings.json`.
 
 ## PS5 (payload .elf)
 
-O mesmo código gera um payload nativo do PS5 (`UnitVPro-PS5.elf`) com o
+O mesmo código gera um payload nativo do PS5 (`WillProTV-PS5.elf`) com o
 [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) e as bibliotecas do
 [PacBrew](https://github.com/ps5-payload-dev/pacbrew-repo) (SDL2, FFmpeg, FreeType, curl).
-As diferenças ficam em blocos `#ifdef UNITV_PS5`; o `.pkg` do PS4 não roda no PS5.
+As diferenças ficam em blocos `#ifdef WILLPRO_PS5`; o `.pkg` do PS4 não roda no PS5.
 
 - **Compilar no GitHub:** o workflow [`.github/workflows/build-ps5.yml`](.github/workflows/build-ps5.yml)
-  roda junto com o do PS4. Baixe em **Actions → (execução) → Artifacts → `UnitVPro-PS5-elf`**.
+  roda junto com o do PS4. Baixe em **Actions → (execução) → Artifacts → `WillProTV-PS5-elf`**.
 - **Compilar localmente (Linux/WSL):**
   ```bash
   curl -sL https://github.com/ps5-payload-dev/pacbrew-repo/releases/download/v0.41.1/ps5-payload-dev.tar.gz | sudo tar xz -C /
   /opt/ps5-payload-sdk/bin/prospero-cmake -S . -B build-ps5 && cmake --build build-ps5
   ```
 - **Rodar:** com o PS5 desbloqueado e um *ELF loader* ativo (elfldr do etaHEN/kstuff na porta 9021),
-  envie o arquivo: `socat -t 9999999 - TCP:IP_DO_PS5:9021 < UnitVPro-PS5.elf`
+  envie o arquivo: `socat -t 9999999 - TCP:IP_DO_PS5:9021 < WillProTV-PS5.elf`
   (ou pelo seu enviador de payloads). Imagens e fontes vão dentro do `.elf` e são extraídas para
-  `/data/UnitVPro/assets` na primeira execução. Login, favoritos e o `log.txt` ficam em `/data/UnitVPro`,
+  `/data/WillProTV/assets` na primeira execução. Login, favoritos e o `log.txt` ficam em `/data/WillProTV`,
   como no PS4.
 
 ## Limitações conhecidas

@@ -1,4 +1,4 @@
-// UnitV Pro para PS4 (OpenOrbis Toolchain) e PS5 (ps5-payload-sdk) — port do app Android (com.willdev.unitvpro)
+// WillPro-TV para PS4 (OpenOrbis Toolchain) e PS5 (ps5-payload-sdk) — port do app Android (com.willdev.unitvpro)
 #include "platform.h"
 #include "http.h"
 #include "gfx.h"
@@ -11,24 +11,24 @@
 #include "crash.h"
 
 #include <cstdlib>
-#ifndef UNITV_PS5
+#ifndef WILLPRO_PS5
 #include <orbis/SystemService.h>
 #endif
 
 static void appMain()
 {
     platform::init();
-    platform::log("Iniciando UnitV Pro");
-#ifdef UNITV_PS5
-    platform::notify("UnitV Pro: iniciando...");
+    platform::log("Iniciando WillPro-TV");
+#ifdef WILLPRO_PS5
+    platform::notify("WillPro-TV: iniciando...");
 #endif
     crash::install();
 
     if (!gfx::init()) {
         platform::log("Falha ao iniciar gráficos");
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
         // encerra para não segurar memória: um novo envio do payload começa do zero
-        platform::notify("UnitV Pro: falha ao iniciar a tela (veja /data/UnitVPro/log.txt)");
+        platform::notify("WillPro-TV: falha ao iniciar a tela (veja /data/WillProTV/log.txt)");
         _Exit(1);
 #endif
         for (;;) platform::sleepMs(1000);
@@ -45,7 +45,7 @@ static void appMain()
 
     player::close();
     gfx::shutdown();
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
     // payload: encerrar o processo devolve a tela ao sistema
     platform::log("Encerrando");
     _Exit(0);

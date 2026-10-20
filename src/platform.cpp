@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <pthread.h>
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 #include <unistd.h>
 #include <csignal>
 #include <sys/types.h>
@@ -45,7 +45,7 @@ namespace platform {
 
 static int32_t g_userId = -1;
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 // Grava os assets embutidos em APP_ASSETS (só os que faltam ou mudaram de tamanho)
 static void extractAssets()
 {
@@ -136,7 +136,7 @@ int32_t userId() { return g_userId; }
 
 std::string macAddress()
 {
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
     uint8_t data[8];
     memset(data, 0, sizeof(data));
     if (sceNetGetMacAddress(data, 0) < 0)
@@ -163,7 +163,7 @@ uint64_t ticksMs()
 
 int64_t unixTime() { return (int64_t)time(NULL); }
 
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
 void sleepMs(uint32_t ms) { usleep(ms * 1000); }
 
 int freeMemoryMB()
@@ -193,8 +193,8 @@ void log(const char* fmt, ...)
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    printf("[UnitVPro] %s\n", buf);
-    // também grava em /data/UnitVPro/log.txt (pode ser copiado via FTP para diagnóstico)
+    printf("[WillProTV] %s\n", buf);
+    // também grava em /data/WillProTV/log.txt (pode ser copiado via FTP para diagnóstico)
     static FILE* lf = nullptr;
     static bool tried = false;
     if (!tried) {
@@ -216,7 +216,7 @@ void notify(const char* fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     log("aviso: %s", buf);
-#ifdef UNITV_PS5
+#ifdef WILLPRO_PS5
     // mesmo formato usado pelo elfldr/ftpsrv do ps5-payload-dev
     struct NotifyRequest {
         char unused[45];
