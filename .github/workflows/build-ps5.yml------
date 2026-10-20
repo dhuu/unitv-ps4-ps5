@@ -48,19 +48,19 @@ jobs:
           cmake --build build-ps5 -j"$(nproc)"
 
       - name: Mapa de símbolos (para traduzir endereços de crash do log)
-        run: llvm-nm-18 -n -C build-ps5/UnitVPro-PS5.elf > build-ps5/UnitVPro-PS5.map
+        run: llvm-nm-18 -n -C build-ps5/WillProTV-PS5.elf > build-ps5/WillProTV-PS5.map
 
       - name: Enviar ELF (artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: UnitVPro-PS5-elf
+          name: WillProTV-PS5-elf
           path: |
-            build-ps5/UnitVPro-PS5.elf
-            build-ps5/UnitVPro-PS5.map
+            build-ps5/WillProTV-PS5.elf
+            build-ps5/WillProTV-PS5.map
           if-no-files-found: error
 
       - name: Publicar release (tags v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build-ps5/UnitVPro-PS5.elf
+          files: build-ps5/WillProTV-PS5.elf
