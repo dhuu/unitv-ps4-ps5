@@ -61,6 +61,10 @@ SDL_Surface* screen() { return g_screen; }
 bool init()
 {
 #ifdef UNITV_PS5
+    // Sem isto o SDL_GetWindowSurface tenta antes um framebuffer por textura (OpenGL/Mesa), que pede
+    // mais memória direta e falha com EAGAIN no payload. A interface já é desenhada por software.
+    SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
     // A memória de vídeo (64 MB) pode demorar a ser liberada por uma execução anterior: tenta algumas vezes
     bool ok = false;
     for (int attempt = 1; attempt <= 5 && !ok; attempt++) {
@@ -91,6 +95,7 @@ bool init()
     // o SDL do PS5 abriria o teclado do sistema sozinho; o app abre quando precisa (ime.cpp)
     SDL_StopTextInput();
 #endif
+    SDL_ClearError();
     g_screen = SDL_GetWindowSurface(g_window);
     if (!g_screen) { platform::log("SDL_GetWindowSurface: %s", SDL_GetError()); return false; }
     g_ren = SDL_CreateSoftwareRenderer(g_screen);
