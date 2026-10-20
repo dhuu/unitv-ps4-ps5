@@ -1,0 +1,99 @@
+name: Build PS4 PKG
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      OO_TOOLCHAIN_VERSION: v0.5.4
+      OO_PS4_TOOLCHAIN: ${{ github.workspace }}/toolchain/OpenOrbis/PS4Toolchain
+      # PkgTool.Core foi feito para .NET Core 3.0; permite rodar no .NET instalado no runner
+      DOTNET_ROLL_FORWARD: Major
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Instalar clang/lld 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18 make nasm xz-utils
+
+      - name: Cache do OpenOrbis Toolchain
+        id: cache-oo
+        uses: actions/cache@v4
+        with:
+          path: toolchain
+          key: oo-toolchain-${{ env.OO_TOOLCHAIN_VERSION }}-llvm18
+
+      - name: Baixar OpenOrbis Toolchain
+        if: steps.cache-oo.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p toolchain
+          curl -sL "https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/${OO_TOOLCHAIN_VERSION}/toolchain-llvm-18.tar.gz" | tar xz -C toolchain
+
+      - name: Verificar toolchain e .NET
+        run: |
+          ls "$OO_PS4_TOOLCHAIN"
+          chmod +x "$OO_PS4_TOOLCHAIN"/bin/linux/*
+          dotnet --list-runtimes || true
+
+      - name: Copiar módulos do sistema (libc.prx, libSceFios2.prx, right.sprx)
+        run: |
+          mkdir -p sce_module sce_sys/about
+          cp "$OO_PS4_TOOLCHAIN"/samples/hello_world/sce_module/*.prx sce_module/
+          cp "$OO_PS4_TOOLCHAIN"/samples/hello_world/sce_sys/about/right.sprx sce_sys/about/
+
+      - name: Cache do FFmpeg
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: ffmpeg-ps4
+          key: ffmpeg-ps4-${{ env.OO_TOOLCHAIN_VERSION }}-${{ hashFiles('scripts/build-ffmpeg.sh') }}
+
+      - name: Compilar FFmpeg para PS4
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        run: bash scripts/build-ffmpeg.sh ffmpeg-ps4
+
+      # O PkgTool.Core de Linux é um binário .NET 3.0 que exige libssl1.1 (inexistente no Ubuntu atual).
+      # Usamos a versão portátil (PkgTool.Core.dll) rodando no .NET 8 do runner.
+      - name: Compilar
+        run: make -j"$(nproc)" CCX=clang++-18 LD=ld.lld-18 PKGTOOL="dotnet $OO_PS4_TOOLCHAIN/bin/windows/PkgTool.Core.dll"
+
+      - name: Mapa de símbolos (para traduzir endereços de crash do log)
+        run: llvm-nm-18 -n -C build/UnitVPro.elf > build/UnitVPro.map
+
+      - name: Enviar ELF + mapa (artifact de depuração)
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitVPro-PS4-debug
+          path: |
+            build/UnitVPro.elf
+            build/UnitVPro.map
+
+      - name: Enviar PKG (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitVPro-PS4-pkg
+          path: "*.pkg"
+          if-no-files-found: error
+
+      - name: Publicar release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.pkg"
