@@ -89,15 +89,31 @@ bool init()
         return false;
     }
 #endif
-    g_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, 0);
-    if (!g_window) { platform::log("SDL_CreateWindow: %s", SDL_GetError()); return false; }
 #ifdef UNITV_PS5
-    // o SDL do PS5 abriria o teclado do sistema sozinho; o app abre quando precisa (ime.cpp)
-    SDL_StopTextInput();
+    // a memória direta pode estar ocupada por uma execução anterior: recria a janela e tenta de novo
+    const int maxTries = 10;
+#else
+    const int maxTries = 1;
 #endif
-    SDL_ClearError();
-    g_screen = SDL_GetWindowSurface(g_window);
-    if (!g_screen) { platform::log("SDL_GetWindowSurface: %s", SDL_GetError()); return false; }
+    for (int attempt = 1; attempt <= maxTries && !g_screen; attempt++) {
+        g_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_W, SCREEN_H, 0);
+        if (!g_window) {
+            platform::log("SDL_CreateWindow (tentativa %d): %s", attempt, SDL_GetError());
+        } else {
+#ifdef UNITV_PS5
+            // o SDL do PS5 abriria o teclado do sistema sozinho; o app abre quando precisa (ime.cpp)
+            SDL_StopTextInput();
+#endif
+            SDL_ClearError();
+            g_screen = SDL_GetWindowSurface(g_window);
+            if (g_screen) break;
+            platform::log("SDL_GetWindowSurface (tentativa %d): %s", attempt, SDL_GetError());
+            SDL_DestroyWindow(g_window);
+            g_window = nullptr;
+        }
+        if (attempt < maxTries) platform::sleepMs(1500);
+    }
+    if (!g_screen) return false;
     g_ren = SDL_CreateSoftwareRenderer(g_screen);
     if (!g_ren) { platform::log("SDL_CreateSoftwareRenderer: %s", SDL_GetError()); return false; }
     SDL_SetRenderDrawBlendMode(g_ren, SDL_BLENDMODE_BLEND);
