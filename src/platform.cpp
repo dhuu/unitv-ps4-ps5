@@ -22,6 +22,8 @@ int sceNetInit(void);
 int sceNetGetMacAddress(uint8_t* addr, int flags);
 int sceAudioOutInit(void);
 int sceKernelAvailableFlexibleMemorySize(size_t*);
+size_t sceKernelGetDirectMemorySize(void);
+int sceKernelAvailableDirectMemorySize(off_t, off_t, size_t, off_t*, size_t*);
 int sceKernelSendNotificationRequest(int, void*, size_t, int);
 }
 // Imagens e fontes embutidas no .elf (gerado por scripts/embed_assets.py)
@@ -100,6 +102,7 @@ bool init()
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     ensureDir(APP_DATA_DIR);
+    log("processo %d (%s)", (int)getpid(), processName(getpid()).c_str());
     closePreviousInstance();
     int r = sceUserServiceInitialize(NULL);
     if (r != 0 && r != (int)0x80960003) log("sceUserServiceInitialize 0x%08X", r);
@@ -172,6 +175,16 @@ int freeMemoryMB()
     if (sceKernelAvailableFlexibleMemorySize(&sz) < 0) return -1;
     return (int)(sz / (1024 * 1024));
 }
+
+int freeDirectMemoryMB()
+{
+    off_t start = 0;
+    size_t sz = 0;
+    // mesmo alinhamento que o SDL usa para os framebuffers
+    if (sceKernelAvailableDirectMemorySize(0, (off_t)sceKernelGetDirectMemorySize(), 0x20000, &start, &sz) < 0)
+        return -1;
+    return (int)(sz / (1024 * 1024));
+}
 #else
 void sleepMs(uint32_t ms) { sceKernelUsleep(ms * 1000); }
 
@@ -184,6 +197,8 @@ int freeMemoryMB()
     if (((AvailFlexFn)(void*)&sceKernelAvailableFlexibleMemorySize)(&sz) < 0) return -1;
     return (int)(sz / (1024 * 1024));
 }
+
+int freeDirectMemoryMB() { return -1; }
 #endif
 
 void log(const char* fmt, ...)

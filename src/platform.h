@@ -21,6 +21,9 @@ uint64_t ticksMs();             // relógio monotônico em ms
 int64_t unixTime();             // segundos desde epoch (UTC)
 void sleepMs(uint32_t ms);
 int freeMemoryMB();             // memória flexível livre (MB), -1 se indisponível
+// Maior bloco livre de memória direta (MB), -1 se indisponível. É dela que sai a tela
+// (o SDL do PS5 reserva 64 MB no SDL_GetWindowSurface); não tem relação com a flexível.
+int freeDirectMemoryMB();
 void log(const char* fmt, ...);
 // Aviso na tela do sistema (PS5: notificação do console; PS4: só grava no log)
 void notify(const char* fmt, ...);

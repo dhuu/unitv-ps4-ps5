@@ -90,7 +90,9 @@ bool init()
     }
 #endif
 #ifdef WILLPRO_PS5
-    // a memória direta pode estar ocupada por uma execução anterior: recria a janela e tenta de novo
+    // O SDL do PacBrew só reserva os 64 MB de memória direta da tela aqui, no SDL_GetWindowSurface.
+    // Se outro processo (jogo/app aberto, outro payload com tela) segura essa memória, falha com EAGAIN:
+    // recria a janela e tenta de novo, caso ela esteja sendo liberada.
     const int maxTries = 10;
 #else
     const int maxTries = 1;
@@ -107,8 +109,8 @@ bool init()
             SDL_ClearError();
             g_screen = SDL_GetWindowSurface(g_window);
             if (g_screen) break;
-            platform::log("SDL_GetWindowSurface (tentativa %d): %s (mem flexível livre %d MB)", attempt, SDL_GetError(),
-                          platform::freeMemoryMB());
+            platform::log("SDL_GetWindowSurface (tentativa %d): %s (mem direta livre %d MB, precisa 64)", attempt,
+                          SDL_GetError(), platform::freeDirectMemoryMB());
             SDL_DestroyWindow(g_window);
             g_window = nullptr;
         }

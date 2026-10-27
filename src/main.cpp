@@ -28,7 +28,8 @@ static void appMain()
         platform::log("Falha ao iniciar gráficos");
 #ifdef WILLPRO_PS5
         // encerra para não segurar memória: um novo envio do payload começa do zero
-        platform::notify("WillPro-TV: falha ao iniciar a tela (veja /data/WillProTV/log.txt)");
+        platform::notify("WillPro-TV: sem memória de vídeo. Feche o jogo/app aberto e outros homebrews e envie de novo "
+                         "(detalhes em /data/WillProTV/log.txt)");
         _Exit(1);
 #endif
         for (;;) platform::sleepMs(1000);
