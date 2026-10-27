@@ -16,6 +16,8 @@ jobs:
     env:
       # ps5-payload-sdk + bibliotecas (SDL2, FFmpeg, FreeType, curl) do PacBrew
       PACBREW_VERSION: v0.41.1
+      # https://github.com/ps5-payload-dev/websrv (código-fonte do binário embutido)
+      WEBSRV_VERSION: v0.34
 
     steps:
       - name: Checkout
@@ -42,13 +44,32 @@ jobs:
           sudo tar xf ps5-payload-dev.tar.gz -C /
           ls /opt/ps5-payload-sdk/bin
 
-      - name: Compilar
+      # Etapa 1: o app em si. É ele que roda na tela (gravado em /data/WillProTV/eboot.elf)
+      - name: Compilar app (eboot.elf)
+        run: |
+          /opt/ps5-payload-sdk/bin/prospero-cmake -S . -B build-app
+          cmake --build build-app -j"$(nproc)"
+
+      - name: Mapa de símbolos (para traduzir endereços de crash do log)
+        run: llvm-nm-18 -n -C build-app/WillProTV-PS5.elf > build-app/WillProTV-PS5.map
+
+      # Etapa 2: o .elf que se envia ao PS5. Leva o app (assets/app) e o websrv (assets/websrv);
+      # enviado como payload, grava os arquivos em /data/WillProTV, sobe o websrv e abre o app.
+      - name: Embutir app e websrv (ps5-payload-dev, GPLv3)
+        run: |
+          mkdir -p assets/app assets/websrv
+          cp build-app/WillProTV-PS5.elf assets/app/eboot.elf
+          cp sce_sys/icon0.png assets/app/icon0.png
+          curl -sfL -o assets/websrv/websrv-ps5.elf \
+            "https://github.com/ps5-payload-dev/websrv/releases/download/${WEBSRV_VERSION}/websrv-ps5.elf"
+          ls -l assets/app assets/websrv
+
+      - name: Compilar ELF final
         run: |
           /opt/ps5-payload-sdk/bin/prospero-cmake -S . -B build-ps5
           cmake --build build-ps5 -j"$(nproc)"
-
-      - name: Mapa de símbolos (para traduzir endereços de crash do log)
-        run: llvm-nm-18 -n -C build-ps5/WillProTV-PS5.elf > build-ps5/WillProTV-PS5.map
+          cp build-app/WillProTV-PS5.map build-ps5/WillProTV-PS5.map
+          ls -l build-ps5/WillProTV-PS5.elf
 
       - name: Enviar ELF (artifact)
         uses: actions/upload-artifact@v4
@@ -59,11 +80,11 @@ jobs:
             build-ps5/WillProTV-PS5.map
           if-no-files-found: error
 
-      # Pasta no formato do websrv/Launcher PKG (ps5-payload-dev): /data/homebrew/WillProTV/eboot.elf
-      - name: Montar pasta homebrew (ícone na tela inicial via websrv)
+      # Opcional: pasta no formato do Launcher do websrv (/data/homebrew/WillProTV)
+      - name: Montar pasta homebrew
         run: |
           mkdir -p homebrew/WillProTV/sce_sys
-          cp build-ps5/WillProTV-PS5.elf homebrew/WillProTV/eboot.elf
+          cp build-app/WillProTV-PS5.elf homebrew/WillProTV/eboot.elf
           cp sce_sys/icon0.png homebrew/WillProTV/sce_sys/icon0.png
           (cd homebrew && zip -r ../WillProTV-PS5-homebrew.zip WillProTV)
 
