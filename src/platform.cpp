@@ -63,6 +63,8 @@ static void extractAssets()
     int written = 0;
     for (unsigned int i = 0; i < g_embeddedAssetCount; i++) {
         const EmbeddedAsset& a = g_embeddedAssets[i];
+        // o websrv é enviado direto da memória; o app (eboot.elf/ícone) o bootstrap grava em BIGAPP_DIR
+        if (strncmp(a.path, "websrv/", 7) == 0 || strncmp(a.path, "app/", 4) == 0) continue;
         std::string path = std::string(APP_ASSETS) + "/" + a.path;
         size_t slash = path.rfind('/');
         if (slash != std::string::npos) ensureDir(path.substr(0, slash));
@@ -115,28 +117,27 @@ static void closePreviousInstance()
 }
 
 // Ícone próprio na tela inicial, no mesmo esquema do "Homebrew Launcher" do websrv: um app só com
-// param.json cujo deeplink pede ao websrv (porta 8080) para abrir /data/homebrew/WillProTV/eboot.elf.
-// Precisa do websrv rodando, mas pula a lista do Launcher.
+// param.json cujo deeplink pede ao websrv (porta 8080) para abrir BIGAPP_DIR/eboot.elf.
+// Precisa do websrv rodando (o bootstrap o sobe), mas pula a lista do Launcher.
 #define SHORTCUT_TITLE_ID "WLTV00005"
 #define SHORTCUT_DIR "/user/app/" SHORTCUT_TITLE_ID
-#define HOMEBREW_DIR "/data/homebrew/WillProTV"
 
-static void installShortcut()
+void installShortcut()
 {
     struct stat st;
     if (stat("/user/appmeta/" SHORTCUT_TITLE_ID "/param.json", &st) == 0 ||
         stat(SHORTCUT_DIR "/sce_sys/param.json", &st) == 0)
         return; // já instalado
     std::string icon;
-    if (stat(HOMEBREW_DIR "/eboot.elf", &st) != 0 || !readFile(HOMEBREW_DIR "/sce_sys/icon0.png", icon)) {
-        log("atalho: %s/eboot.elf ou sce_sys/icon0.png não encontrado, atalho não criado", HOMEBREW_DIR);
+    if (stat(BIGAPP_DIR "/eboot.elf", &st) != 0 || !readFile(BIGAPP_DIR "/sce_sys/icon0.png", icon)) {
+        log("atalho: %s/eboot.elf ou sce_sys/icon0.png não encontrado, atalho não criado", BIGAPP_DIR);
         return;
     }
     const std::string param =
         "{\n"
         "    \"titleId\": \"" SHORTCUT_TITLE_ID "\",\n"
-        "    \"deeplinkUri\": \"http://127.0.0.1:8080/hbldr?pipe=0&daemon=0&cwd=" HOMEBREW_DIR
-        "&path=" HOMEBREW_DIR "/eboot.elf\",\n"
+        "    \"deeplinkUri\": \"http://127.0.0.1:8080/hbldr?pipe=0&daemon=0&cwd=" BIGAPP_DIR
+        "&path=" BIGAPP_DIR "/eboot.elf\",\n"
         "    \"localizedParameters\": {\n"
         "        \"defaultLanguage\": \"pt-BR\",\n"
         "        \"pt-BR\": { \"titleName\": \"" APP_NAME "\" },\n"
@@ -281,6 +282,10 @@ int freeMemoryMB()
 int freeDirectMemoryMB() { return -1; }
 #endif
 
+static const char* g_logPath = APP_DATA_DIR "/log.txt";
+
+void setLogFile(const char* path) { g_logPath = path; }
+
 void log(const char* fmt, ...)
 {
     char buf[1024];
@@ -295,7 +300,7 @@ void log(const char* fmt, ...)
     if (!tried) {
         tried = true;
         mkdir(APP_DATA_DIR, 0777);
-        lf = fopen(APP_DATA_DIR "/log.txt", "w");
+        lf = fopen(g_logPath, "w");
     }
     if (lf) {
         fprintf(lf, "[%llu] %s\n", (unsigned long long)ticksMs(), buf);

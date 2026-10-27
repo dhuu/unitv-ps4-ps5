@@ -59,8 +59,13 @@ static void appMain()
 
 int main(int argc, char* argv[])
 {
+#ifdef WILLPRO_PS5
+    // como payload não há memória de vídeo: reabre como app pelo websrv embutido e encerra
+    if (platform::bootstrapAsApp(argc, argv)) _Exit(0);
+#else
     (void)argc;
     (void)argv;
+#endif
     // A thread principal do processo tem pilha limitada: a interface + conversão de vídeo
     // rodam numa thread com pilha de 8 MB.
     if (!platform::startThread(appMain, 8 * 1024 * 1024)) appMain();

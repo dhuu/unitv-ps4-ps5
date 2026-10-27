@@ -52,6 +52,7 @@ target_link_libraries(WillProTV PRIVATE
     z
     PkgConfig::CURL
     SceAudioOut
+    SceAppInstUtil # atalho na tela inicial (platform.cpp)
     SceImeDialog
     SceUserService
     SceNet
