@@ -59,8 +59,25 @@ jobs:
             build-ps5/WillProTV-PS5.map
           if-no-files-found: error
 
+      # Pasta no formato do websrv/Launcher PKG (ps5-payload-dev): /data/homebrew/WillProTV/eboot.elf
+      - name: Montar pasta homebrew (ícone na tela inicial via websrv)
+        run: |
+          mkdir -p homebrew/WillProTV/sce_sys
+          cp build-ps5/WillProTV-PS5.elf homebrew/WillProTV/eboot.elf
+          cp sce_sys/icon0.png homebrew/WillProTV/sce_sys/icon0.png
+          (cd homebrew && zip -r ../WillProTV-PS5-homebrew.zip WillProTV)
+
+      - name: Enviar pasta homebrew (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WillProTV-PS5-homebrew
+          path: homebrew
+          if-no-files-found: error
+
       - name: Publicar release (tags v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build-ps5/WillProTV-PS5.elf
+          files: |
+            build-ps5/WillProTV-PS5.elf
+            WillProTV-PS5-homebrew.zip
