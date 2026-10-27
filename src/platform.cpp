@@ -10,6 +10,9 @@
 
 #ifdef WILLPRO_PS5
 #include <unistd.h>
+#include <algorithm>
+#include <cerrno>
+#include <cstddef>
 #include <csignal>
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -70,12 +73,20 @@ static void extractAssets()
 // Nome do processo (o loader dá o mesmo nome a cada envio do payload)
 static std::string processName(pid_t pid)
 {
+    // O kinfo_proc do PS5 é maior que o do header do FreeBSD: com sizeof(kp) o sysctl falha (ENOMEM)
+    // e o nome vinha vazio. Pergunta o tamanho antes; o início da estrutura (até ki_comm) é o mesmo.
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, (int)pid};
-    struct kinfo_proc kp;
-    size_t len = sizeof(kp);
-    memset(&kp, 0, sizeof(kp));
-    if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0 || len == 0) return "";
-    return kp.ki_comm;
+    size_t len = 0;
+    if (sysctl(mib, 4, NULL, &len, NULL, 0) != 0 || len == 0) return "";
+    std::string buf(std::max(len, sizeof(struct kinfo_proc)), '\0');
+    if (sysctl(mib, 4, &buf[0], &len, NULL, 0) != 0) {
+        static bool logged = false;
+        if (!logged) { logged = true; log("sysctl KERN_PROC_PID %d: errno %d (len %zu)", (int)pid, errno, len); }
+        return "";
+    }
+    if (len < offsetof(struct kinfo_proc, ki_comm) + sizeof(((struct kinfo_proc*)0)->ki_comm)) return "";
+    const struct kinfo_proc* kp = (const struct kinfo_proc*)buf.data();
+    return std::string(kp->ki_comm, strnlen(kp->ki_comm, sizeof(kp->ki_comm)));
 }
 
 // Um envio anterior do payload que continua aberto segura a memória de vídeo
@@ -88,6 +99,7 @@ static void closePreviousInstance()
     if (readFile(pidFile, old)) {
         pid_t pid = (pid_t)atoi(old.c_str());
         std::string name = pid > 0 && pid != self ? processName(pid) : "";
+        if (pid > 0 && pid != self) log("execução anterior: pid %d (%s)", (int)pid, name.empty() ? "não está rodando" : name.c_str());
         if (!name.empty() && name == processName(self)) {
             log("encerrando execução anterior (pid %d, %s)", (int)pid, name.c_str());
             kill(pid, SIGKILL);
@@ -181,8 +193,16 @@ int freeDirectMemoryMB()
     off_t start = 0;
     size_t sz = 0;
     // mesmo alinhamento que o SDL usa para os framebuffers
-    if (sceKernelAvailableDirectMemorySize(0, (off_t)sceKernelGetDirectMemorySize(), 0x20000, &start, &sz) < 0)
+    size_t total = sceKernelGetDirectMemorySize();
+    int r = sceKernelAvailableDirectMemorySize(0, (off_t)total, 0x20000, &start, &sz);
+    if (r < 0) {
+        static bool logged = false;
+        if (!logged) {
+            logged = true;
+            log("sceKernelAvailableDirectMemorySize 0x%08X errno %d (total %zu MB)", r, errno, total / (1024 * 1024));
+        }
         return -1;
+    }
     return (int)(sz / (1024 * 1024));
 }
 #else
