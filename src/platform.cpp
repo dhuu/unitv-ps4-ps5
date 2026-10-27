@@ -1,4 +1,5 @@
 #include "platform.h"
+#include "config.h"
 
 #include <cstdio>
 #include <cstdarg>
@@ -28,6 +29,9 @@ int sceKernelAvailableFlexibleMemorySize(size_t*);
 size_t sceKernelGetDirectMemorySize(void);
 int sceKernelAvailableDirectMemorySize(off_t, off_t, size_t, off_t*, size_t*);
 int sceKernelSendNotificationRequest(int, void*, size_t, int);
+int sceAppInstUtilInitialize(void);
+int sceAppInstUtilAppInstallAll(void*);
+#include <ps5/kernel.h>
 }
 // Imagens e fontes embutidas no .elf (gerado por scripts/embed_assets.py)
 struct EmbeddedAsset {
@@ -110,6 +114,61 @@ static void closePreviousInstance()
     writeFile(pidFile, std::to_string((int)self));
 }
 
+// Ícone próprio na tela inicial, no mesmo esquema do "Homebrew Launcher" do websrv: um app só com
+// param.json cujo deeplink pede ao websrv (porta 8080) para abrir /data/homebrew/WillProTV/eboot.elf.
+// Precisa do websrv rodando, mas pula a lista do Launcher.
+#define SHORTCUT_TITLE_ID "WLTV00005"
+#define SHORTCUT_DIR "/user/app/" SHORTCUT_TITLE_ID
+#define HOMEBREW_DIR "/data/homebrew/WillProTV"
+
+static void installShortcut()
+{
+    struct stat st;
+    if (stat("/user/appmeta/" SHORTCUT_TITLE_ID "/param.json", &st) == 0 ||
+        stat(SHORTCUT_DIR "/sce_sys/param.json", &st) == 0)
+        return; // já instalado
+    std::string icon;
+    if (stat(HOMEBREW_DIR "/eboot.elf", &st) != 0 || !readFile(HOMEBREW_DIR "/sce_sys/icon0.png", icon)) {
+        log("atalho: %s/eboot.elf ou sce_sys/icon0.png não encontrado, atalho não criado", HOMEBREW_DIR);
+        return;
+    }
+    const std::string param =
+        "{\n"
+        "    \"titleId\": \"" SHORTCUT_TITLE_ID "\",\n"
+        "    \"deeplinkUri\": \"http://127.0.0.1:8080/hbldr?pipe=0&daemon=0&cwd=" HOMEBREW_DIR
+        "&path=" HOMEBREW_DIR "/eboot.elf\",\n"
+        "    \"localizedParameters\": {\n"
+        "        \"defaultLanguage\": \"pt-BR\",\n"
+        "        \"pt-BR\": { \"titleName\": \"" APP_NAME "\" },\n"
+        "        \"en-US\": { \"titleName\": \"" APP_NAME "\" }\n"
+        "    }\n"
+        "}\n";
+
+    // a instalação exige a identidade do ShellCore (como o websrv); volta a original no fim
+    uint64_t oldAuthid = kernel_get_ucred_authid(-1);
+    kernel_set_ucred_authid(-1, 0x4801000000000013ULL);
+    int r = -1;
+    if (sceAppInstUtilInitialize() == 0) {
+        mkdir(SHORTCUT_DIR, 0755);
+        mkdir(SHORTCUT_DIR "/sce_sys", 0755);
+        if (writeFile(SHORTCUT_DIR "/sce_sys/param.json", param) &&
+            writeFile(SHORTCUT_DIR "/sce_sys/icon0.png", icon)) {
+            int (*installTitleDir)(const char*, const char*, void*) = nullptr;
+            uint32_t handle = 0;
+            if (kernel_dynlib_handle(-1, "libSceAppInstUtil.sprx", &handle) == 0)
+                installTitleDir = (int (*)(const char*, const char*, void*))kernel_dynlib_resolve(-1, handle, "Wudg3Xe3heE");
+            r = installTitleDir ? installTitleDir(SHORTCUT_TITLE_ID, "/user/app/", nullptr) : sceAppInstUtilAppInstallAll(nullptr);
+        } else {
+            log("atalho: falha ao gravar em %s", SHORTCUT_DIR);
+        }
+    } else {
+        log("atalho: sceAppInstUtilInitialize falhou");
+    }
+    kernel_set_ucred_authid(-1, oldAuthid);
+    log("atalho na tela inicial (%s): %s (0x%08X)", SHORTCUT_TITLE_ID, r == 0 ? "instalado" : "falhou", r);
+    if (r == 0) notify("WillPro-TV: ícone adicionado à tela inicial");
+}
+
 bool init()
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -122,6 +181,7 @@ bool init()
     sceNetInit();
     sceAudioOutInit();
     extractAssets();
+    installShortcut();
     return true;
 }
 #else
